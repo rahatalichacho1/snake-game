@@ -1,0 +1,141 @@
+# Importing the required module
+from tkinter import *
+import random
+
+# Setting up the dimensions and parameters of the game
+game_width = 1000
+game_height = 700
+speed = 100
+space_size = 30
+body_parts = 3
+snake_color = "orange"
+food_color = "red"
+background_color = "black"
+
+# Defining the Snake class
+class Snake:
+    def __init__(self):
+        # Initializing snake attributes
+        self.body_size = body_parts
+        self.coordinates = []
+        self.squares = []
+        # Creating initial body parts
+        for i in range(0, body_parts):
+            self.coordinates.append((0, 0))
+        # Creating rectangles representing snake segments on canvas
+        for x, y in self.coordinates:
+            square = canvas.create_rectangle(x, y, x + space_size, y + space_size, fill=snake_color, tag="snake")
+            self.squares.append(square)
+
+# Defining the Food class
+class Food:
+    def __init__(self):
+        # Generating initial food location
+        self.set_new_location()
+
+    # Method to set a new random location for food
+    def set_new_location(self):
+        x = random.randint(0, (game_width // space_size - 1)) * space_size
+        y = random.randint(0, (game_height // space_size - 1)) * space_size
+        self.coordinates = (x, y)
+        # Creating oval representing food on canvas
+        canvas.create_oval(x, y, x + space_size, y + space_size, fill=food_color, tag="food")
+
+# Function to move the snake and update game state
+def next_turn():
+    global direction, snake, food, score
+    # Getting the current head position of the snake
+    x, y = snake.coordinates[0]
+    # Moving the snake based on the current direction
+    if direction == "up":
+        y -= space_size
+    elif direction == "down":
+        y += space_size
+    elif direction == "left":
+        x -= space_size
+    elif direction == "right":
+        x += space_size
+    # Inserting the new head position into the snake's coordinates
+    snake.coordinates.insert(0, (x, y))
+    # Creating a new rectangle representing the snake's head on canvas
+    square = canvas.create_rectangle(x, y, x + space_size, y + space_size, fill=snake_color)
+    snake.squares.insert(0, square)
+    # Checking if the snake has eaten the food
+    if (x, y) == food.coordinates:
+        # Increasing the score and updating the label
+        score += 1
+        label.config(text="Score: {}".format(score))
+        # Removing the eaten food from canvas and generating a new one
+        canvas.delete("food")
+        food.set_new_location()
+    else:
+        # If the snake has not eaten food, removing the last segment of the snake
+        del snake.coordinates[-1]
+        canvas.delete(snake.squares[-1])
+        del snake.squares[-1]
+    # Checking for collisions (with walls or itself)
+    if check_collisions():
+        game_over()
+    else:
+        # Scheduling the next turn after a certain time (speed)
+        window.after(speed, next_turn)
+
+# Function to handle direction change
+def change_direction(new_direction):
+    global direction
+    # Preventing the snake from turning back on itself
+    if new_direction == "left" and direction != "right":
+        direction = new_direction
+    elif new_direction == "right" and direction != "left":
+        direction = new_direction
+    elif new_direction == "up" and direction != "down":
+        direction = new_direction
+    elif new_direction == "down" and direction != "up":
+        direction = new_direction
+
+# Function to check for collisions (with walls or itself)
+def check_collisions():
+    x, y = snake.coordinates[0]
+    # Checking if the snake has hit the walls
+    if x < 0 or x >= game_width or y < 0 or y >= game_height:
+        return True
+    # Checking if the snake has collided with itself
+    for body_part in snake.coordinates[1:]:
+        if x == body_part[0] and y == body_part[1]:
+            return True
+    return False
+
+# Function to handle game over condition
+def game_over():
+    # Removing all elements from canvas and displaying game over message
+    canvas.delete(ALL)
+    canvas.create_text(canvas.winfo_width() / 2, canvas.winfo_height() / 2, font=("console", 70), text="Game Over", fill="red")
+
+# Creating the main window for the game
+window = Tk()
+window.title("Snake Game")
+window.resizable(False, False)
+
+# Initializing score, direction, label, and canvas
+score = 0
+direction = "down"
+label = Label(window, text="Score: {}".format(score), font=("consolas", 40))
+label.pack()
+canvas = Canvas(window, bg=background_color, height=game_height, width=game_width)
+canvas.pack()
+
+# Creating snake and food objects
+snake = Snake()
+food = Food()
+
+# Binding arrow key presses to change_direction function
+window.bind("<Left>", lambda event: change_direction("left"))
+window.bind("<Right>", lambda event: change_direction("right"))
+window.bind("<Up>", lambda event: change_direction("up"))
+window.bind("<Down>", lambda event: change_direction("down"))
+
+# Starting the game loop by calling next_turn function
+next_turn()
+
+# Running the Tkinter event loop
+window.mainloop()
